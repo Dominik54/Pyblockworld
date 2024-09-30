@@ -1,5 +1,29 @@
+import math
+
 from pyblockworld import World, Window
 from pyglet.window import key
+
+TICKS_PER_SEC = 60
+
+# Size of sectors used to ease block loading.
+SECTOR_SIZE = 16
+
+WALKING_SPEED = 10
+FLYING_SPEED = 15
+
+GRAVITY = 20.0
+MAX_JUMP_HEIGHT = 2.0  # About the height of a block.
+# To derive the formula for calculating jump speed, first solve
+#    v_t = v_0 + a * t
+# for the time at which you achieve maximum height, where a is the acceleration
+# due to gravity and v_t = 0. This gives:
+#    t = - v_0 / a
+# Use t and the desired MAX_JUMP_HEIGHT to solve for v_0 (jump speed) in
+#    s = s_0 + v_0 * t + (a * t^2) / 2
+JUMP_SPEED = math.sqrt(2 * GRAVITY * MAX_JUMP_HEIGHT)
+TERMINAL_VELOCITY = 50
+
+PLAYER_HEIGHT = 2
 
 '''
 print("Block types", World.MATERIALS)
@@ -25,6 +49,7 @@ world.run()
 
 #   print("Block types", World.MATERIALS)
 
+
 class BlockWorld:
     def set_block(self, x, y, z, block):
         pass
@@ -36,12 +61,15 @@ class BlockWorld:
         pass
 
 
+blockworld = BlockWorld()
+
+
 class Wall:
-    def __init__(self, pos=(), bw=None):
+    def __init__(self, pos=(), bw=None, rotated=False):
         self.width = 6
         self.height = 5
         self.pos = pos
-        self.rotated = False
+        self.rotated = rotated
         self.material_id = "default:stone"
         self._bw = blockworld
 
@@ -79,18 +107,29 @@ class WallWithWindow(Wall):
         pass
 
 
-class CustomWorld(Wall):
-    def __init__(self):
-        super().__init__(*args, **kwargs)
+class House:
+    def __init__(self, pos, bw):
+        self.wall = Wall
+
+
+class CustomWorld(World):
+    def __init__(self, name="Custom World"):
+        super().__init__(name=name, window_class=lambda *args, **kwargs: CustomWindow(self, *args, **kwargs))
 
 
 class CustomWindow(Window):
     def __init__(self, world, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.world = world
-        self.wall_with_window = WallWithWindow(world.window.position, blockworld)
-        self.wall_with_door = WallWithDoor(world.window.position, blockworld)
+        self.wall_with_window = WallWithWindow(self.position, blockworld)
+        self.wall_with_door = WallWithDoor(self.position, blockworld)
         self.materials = ["air", "default:brick", "default:stone", "default:sand", "default:grass"]
+
+    def get_position(self, world):
+        vector = world.window.get_sight_vector()  # returns current line of sight vector where pl. is looking
+        print(f"This is the vector: {vector}")
+        block, previous = world.window.model.hit_test(world.window.position, vector)
+        return block, previous
 
     def on_key_press(self, symbol, modifiers):
         """ Called when the player presses a key. See pyglet docs for key
@@ -114,7 +153,7 @@ class CustomWindow(Window):
             self.strafe[1] += 1
         elif symbol == key.SPACE:
             if self.dy == 0:
-                self.dy = self.JUMP_SPEED
+                self.dy = JUMP_SPEED
         elif symbol == key.ESCAPE:
             self.set_exclusive_mouse(False)
         elif symbol == key.Y:
@@ -130,13 +169,13 @@ class CustomWindow(Window):
                 self.world.setBlock(x, y + 1, z, "default:sand")
         elif symbol == key.B:
             print("B key pressed")
-            CustomWindow.b_key_pressed(self.world)
+            self.b_key_pressed(self.world)
         elif symbol == key.N:
             print("N key pressed")
-            CustomWindow.n_key_pressed(self.world)
+            self.n_key_pressed(self.world)
         elif symbol == key.M:
             print("M key pressed")
-            CustomWindow.m_key_pressed(self, self.world)
+            self.m_key_pressed(self.world)
         elif symbol == key.TAB:
             self.flying = not self.flying
         elif symbol in self.num_keys:
@@ -145,15 +184,12 @@ class CustomWindow(Window):
         else:
             self.unknown_key_pressed(symbol)
 
-    @staticmethod
-    def b_key_pressed(world: World, material="default:stone"):
+    def b_key_pressed(self, world: World, material="default:stone"):
         # Neue Blöcke können mit setBlock gesetzt werden.
         # Verfügbare Materialien stehen in World.MATERIALS und umfassen
         # air, default:brick, default:stone, default:sand, default:grass
 
-        vector = world.window.get_sight_vector()
-
-        block, previous = world.window.model.hit_test(world.window.position, vector)
+        block, previous = self.get_position(world)
 
         if block:
             x, y, z = block
@@ -163,14 +199,13 @@ class CustomWindow(Window):
 
             # Mehrere Blöcke auf einmal abseits des Spielers platzieren
             world.setBlocks(x, y, z, x, y + 3, z, material)
+            print(f"block = {block} previous = {previous}")
         else:
             print("No block found under crosshairs")
 
-    @staticmethod
-    def n_key_pressed(world: World, material="default:brick"):
+    def n_key_pressed(self, world: World, material="default:brick"):
 
-        vector = world.window.get_sight_vector()
-        block, previous = world.window.model.hit_test(world.window.position, vector)
+        block, previous = self.get_position(world)
 
         if block:
             x, y, z = block
@@ -188,26 +223,21 @@ class CustomWindow(Window):
 
     def m_key_pressed(self, world: World, material="default:brick"):
 
-        vector = world.window.get_sight_vector()
-        block, previous = world.window.model.hit_test(world.window.position, vector)
+        block, previous = self.get_position(world)
 
         if block:
-            Wall.build(self, world, material)
+            wall_not_rotated = Wall(pos=block, bw=world)
+            wall_rotated = Wall(pos=block, bw=world, rotated=True)
+            wall_not_rotated.build(world, material)
+            wall_rotated.build(world, material)
         else:
             print("No block found under crosshairs")
-
-
-class CustomWorld(World):
-    def __init__(self, name="Custom World"):
-        super().__init__(name=name, window_class=lambda *args, **kwargs: CustomWindow(self, *args, **kwargs))
 
 
 def main():
     world = CustomWorld()
     world.run()
 
-
-blockworld = BlockWorld
 
 if __name__ == "__main__":
     main()
