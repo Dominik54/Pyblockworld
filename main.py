@@ -114,7 +114,8 @@ class House:
 
 class CustomWorld(World):
     def __init__(self, name="Custom World"):
-        super().__init__(name=name, window_class=lambda *args, **kwargs: CustomWindow(self, *args, **kwargs))
+        super().__init__(name=name, create_window=False)
+        self.window = CustomWindow(self)
 
 
 class CustomWindow(Window):
