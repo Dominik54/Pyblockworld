@@ -177,6 +177,9 @@ class CustomWindow(Window):
         elif symbol == key.M:
             print("M key pressed")
             self.m_key_pressed(self.world)
+        elif symbol == key.H:
+            print("H key pressed")
+            self.h_key_pressed(self.world)
         elif symbol == key.TAB:
             self.flying = not self.flying
         elif symbol in self.num_keys:
@@ -225,6 +228,7 @@ class CustomWindow(Window):
     def m_key_pressed(self, world: World, material="default:brick"):
 
         block, previous = self.get_position(world)
+        print(f"block: {block}, previous={previous}")
 
         if block:
             wall_not_rotated = Wall(pos=block, bw=world)
@@ -233,6 +237,9 @@ class CustomWindow(Window):
             wall_rotated.build(world, material)
         else:
             print("No block found under crosshairs")
+
+    def h_key_pressed(self, world: World, material="default:brick"):
+        pass
 
 
 def main():
