@@ -72,12 +72,14 @@ def tex_coords(top, bottom, side):
     result.extend(side * 4)
     return result
 
+
 TEXTURE_PATH = os.path.join(os.path.split(__file__)[0], 'texture.png')
 
 GRASS = tex_coords((1, 0), (0, 1), (0, 0))
 SAND = tex_coords((1, 1), (1, 1), (1, 1))
 BRICK = tex_coords((2, 0), (2, 0), (2, 0))
 STONE = tex_coords((2, 1), (2, 1), (2, 1))
+WOOD = tex_coords((3, 0), (3, 0), (3, 0))
 AIR = 0
 
 FACES = [
@@ -191,7 +193,7 @@ class Model:
         #                 self.add_block((x, y, z), t, immediate=False)
         #         s -= d  # decrement side lenth so hills taper off
 
-    def hit_test(self, position, vector, max_distance=8):
+    def hit_test(self, position, vector, max_distance=100):
         """ Line of sight search from current position. If a block is
         intersected it is returned, along with the block previously in the line
         of sight. If no block is found, return None, None.
@@ -865,7 +867,8 @@ class World:
         'default:sand': SAND,
         'default:stone': STONE,
         'default:grass': GRASS,
-        'air': AIR
+        'air': AIR,
+        'default:wood': WOOD,
     }
     MATERIALS = list(_MAT.keys())
 
